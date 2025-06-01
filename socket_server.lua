@@ -1,0 +1,44 @@
+-- Função para inicializar servidor socket (baseada na implementação correta do mGBA)
+local server = nil
+local socketList = {}
+local nextID = 1
+local port = 8888
+
+
+function InitializeServer()
+    while not server do
+        server, error = socket.bind(nil, port)
+        if error then
+            if error == socket.ERRORS.ADDRESS_IN_USE then
+                port = port + 1
+            else
+                console:error("❌ Erro ao Bind servidor:", error)
+                break
+            end
+        else
+            local ok
+            ok, error = server:listen()
+            if error then
+                server:close()
+                console:error("❌ Erro ao iniciar servidor:", error)
+            else
+                console:log("✅ Servidor socket inicializado na porta " .. port)
+                server:add("received", SocketAccept)
+            end
+        end
+    end
+end
+
+
+function SocketAccept()
+    console:log("✅ Aceitando conexão...")
+	local sock, error = server:accept()
+	if error then
+		console:error("❌ Erro ao aceitar conexão:", error)
+		return
+	end
+	local id = nextID
+	nextID = id + 1
+	socketList[id] = sock
+	console:log("✅ Conexão estabelecida com o cliente " .. id)
+end
