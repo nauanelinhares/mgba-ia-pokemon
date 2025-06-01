@@ -8,7 +8,7 @@ local client = socket.tcp()
 
 -- Conecta ao servidor
 print("🔗 Conectando ao servidor...")
-local result, err = client:connect("172.26.16.1", 58539)
+local result, err = client:connect("172.26.16.1", 8888)
 
 if not result then
     print("❌ Erro ao conectar:", err)

@@ -12,7 +12,7 @@ end
 local BASE_ADDRESS = 0x02024284    -- Endereço base do primeiro Pokémon no time
 local POKEMON_SIZE = 100           -- Cada Pokémon ocupa 100 bytes
 local MAX_TEAM_SIZE = 6           -- Máximo de 6 Pokémons no time
-local UPDATE_FREQUENCY = 1      -- A cada quantos frames atualizar (60 = ~1 segundo)
+local UPDATE_FREQUENCY = 1000      -- A cada quantos frames atualizar (60 = ~1 segundo)
 
 -- Variáveis globais
 local frame_count = 0
@@ -22,54 +22,14 @@ local last_team_data = {}
 
 -- local socket = require("socket")
 local server = nil
-local connected_clients = {}
+
 
 -- Importa os módulos
 local readPokemonData = require("read_pokemon_data")
+local socket_server = require("socket_server")
 
--- Função para inicializar servidor socket (baseada no test_server.lua)
-local function initializeServer()
-    console:log("🖥️ Inicializando Servidor Socket")
-    console:log("=================================")
-    
-    server = socket.tcp()
-    -- server:setoption("reuseaddr", true)
-    -- server:settimeout(0) -- Non-blocking
-    
-    local result, err = server:bind("127.0.0.1", 8080)
-    if not result then
-        console:error("❌ Erro no bind:", err)
-        return false
-    end
-    
-    result, err = server:listen(5) -- Permite até 5 conexões pendentes
-    if not result then
-        console:error("❌ Erro no listen:", err)
-        return false
-    end
-    
-    console:log("✅ Servidor rodando em 127.0.0.1:8080")
-    console:log("💡 Execute 'lua test_mgba_socket.lua' em outro terminal")
-    console:log("⏳ Aguardando conexões...")
-    
-    return true
-end
 
--- Função para aceitar novas conexões
-local function acceptNewConnections()
-    if not server then 
-        console:error("❌ Servidor não inicializado")
-        return
-    end
-    
-    local client = server:accept()
-    if client then
-        table.insert(connected_clients, client)
-        console:log("🤝 Cliente conectado! Total: " .. #connected_clients)
-    end
-    
-    console:log("🤝 Cliente não conectado")
-end
+
 
 -- Função para serializar dados para JSON simples
 local function tableToJson(data)
@@ -114,12 +74,12 @@ end
 
 -- Função para enviar dados para todos os clientes conectados
 local function sendDataToClients(data)
-    if #connected_clients == 0 then return end
+    if #socket_server.socketList == 0 then return end
     
     local json_data = tableToJson(data)
     local clients_to_remove = {}
     
-    for i, client in ipairs(connected_clients) do
+    for i, client in ipairs(socket_server.socketList) do
         local result, err = client:send(json_data .. "\n")
         if not result then
             console:log("🔌 Cliente desconectado")
@@ -129,9 +89,9 @@ local function sendDataToClients(data)
     
     -- Remove clientes desconectados
     for i = #clients_to_remove, 1, -1 do
-        local client = connected_clients[clients_to_remove[i]]
+        local client = socket_server.socketList[clients_to_remove[i]]
         client:close()
-        table.remove(connected_clients, clients_to_remove[i])
+        table.remove(socket_server.socketList, clients_to_remove[i])
     end
 end
 
@@ -247,7 +207,6 @@ local function onFrame()
     frame_count = frame_count + 1
     
     -- Aceita novas conexões a cada frame
-    acceptNewConnections()
 
     -- Atualiza a cada UPDATE_FREQUENCY frames
     if frame_count % UPDATE_FREQUENCY == 0 then
@@ -259,7 +218,7 @@ local function onFrame()
             sendDataToClients(json_data)
             
             console:log(string.format("Frame %d - Time com %d Pokémon(s) - Enviado para %d cliente(s)", 
-                frame_count, pokemon_count, #connected_clients))
+                frame_count, pokemon_count, #socket_server.socketList))
             
             for slot = 1, MAX_TEAM_SIZE do
                 local pokemon = team_data[slot]
@@ -293,7 +252,7 @@ local function onStart()
     console:log("Monitorando slots 1-" .. MAX_TEAM_SIZE)
 
     -- Inicializa servidor socket
-    if initializeServer() then
+    if socket_server.InitializeServer() then
         console:log("Aguardando conexões Python...")
     end
 
@@ -324,13 +283,13 @@ local function onShutdown()
     console:log("🔌 Encerrando servidor...")
     
     -- Fecha todas as conexões de clientes
-    for _, client in ipairs(connected_clients) do
+    for _, client in ipairs(socket_server.socketList) do
         if client then
             client:send("DISCONNECT\n")
             client:close()
         end
     end
-    connected_clients = {}
+    socket_server.socketList = {}
     
     -- Fecha o servidor
     if server then
