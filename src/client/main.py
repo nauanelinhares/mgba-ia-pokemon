@@ -168,11 +168,11 @@ class PokemonClient:
         finally:
             self.disconnect()
 
-def main():
+def main(host, port):
     print("🚀 Cliente Pokemon mGBA")
     print("   Conectando ao emulador...")
     
-    client = PokemonClient()
+    client = PokemonClient(host, port)
     
     try:
         client.start_monitoring()
@@ -182,4 +182,4 @@ def main():
     print("👋 Programa encerrado")
 
 if __name__ == "__main__":
-    main() 
+    main(host='172.26.16.1', port=8888) 
