@@ -10,7 +10,7 @@ end
 
 -- Configurações
 local BASE_ADDRESS = 0x02024284 -- Endereço base do primeiro Pokémon no time
-local UPDATE_FREQUENCY = 30     -- A cada quantos frames atualizar (60 = ~1 segundo)
+local UPDATE_FREQUENCY = 200     -- A cada quantos frames atualizar (60 = ~1 segundo)
 
 -- Variáveis globais
 local frame_count = 0
