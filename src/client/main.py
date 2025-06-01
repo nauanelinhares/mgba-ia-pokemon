@@ -17,7 +17,7 @@ class PokemonClient:
     def load_pokemon_names(self) -> Dict[int, str]:
         """Load Pokemon names from JSON file"""
         try:
-            with open('pokemon_unbound_data.json', 'r') as f:
+            with open('data/game/pokemon_unbound/pokemon_data.json', 'r') as f:
                 data = json.load(f)
                 return {int(k): v for k, v in data.items()}
         except FileNotFoundError:
