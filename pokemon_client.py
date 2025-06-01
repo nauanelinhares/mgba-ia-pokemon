@@ -15,18 +15,18 @@ class PokemonClient:
         self.pokemon_names = self.load_pokemon_names()
         
     def load_pokemon_names(self) -> Dict[int, str]:
-        """Carrega nomes dos Pokémon do arquivo JSON"""
+        """Load Pokemon names from JSON file"""
         try:
             with open('pokemon_unbound_data.json', 'r') as f:
                 data = json.load(f)
                 return {int(k): v for k, v in data.items()}
         except FileNotFoundError:
-            print("⚠️  Arquivo pokemon_unbound_data.json não encontrado")
-            print("   Os Pokémon serão exibidos apenas com ID numérico")
+            print("⚠️  File pokemon_unbound_data.json not found")
+            print("   Pokemon will be displayed with numeric ID only")
             return {}
     
     def connect(self, retry_interval: float = 2.0, max_retries: int = None) -> bool:
-        """Conecta ao servidor mGBA com tentativas automáticas"""
+        """Connect to mGBA server with automatic retry attempts"""
         attempt = 0
         
         while max_retries is None or attempt < max_retries:
@@ -34,28 +34,28 @@ class PokemonClient:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.socket.connect((self.host, self.port))
                 self.connected = True
-                print(f"✅ Conectado ao servidor mGBA em {self.host}:{self.port}")
+                print(f"✅ Connected to mGBA server at {self.host}:{self.port}")
                 return True
                 
             except ConnectionRefusedError:
                 attempt += 1
                 if attempt == 1:
-                    print(f"🔄 Tentando conectar ao servidor {self.host}:{self.port}...")
-                    print("   Aguardando servidor mGBA ficar disponível...")
+                    print(f"🔄 Trying to connect to server {self.host}:{self.port}...")
+                    print("   Waiting for mGBA server to become available...")
                 
-                print(f"   Tentativa {attempt}... (Ctrl+C para cancelar)")
+                print(f"   Attempt {attempt}... (Ctrl+C to cancel)")
                 
                 try:
                     time.sleep(retry_interval)
                 except KeyboardInterrupt:
-                    print("\n⏹️  Conexão cancelada pelo usuário")
+                    print("\n⏹️  Connection cancelled by user")
                     return False
                     
             except Exception as e:
-                print(f"❌ Erro ao conectar: {e}")
+                print(f"❌ Error connecting: {e}")
                 return False
                 
-        print(f"❌ Falha após {max_retries} tentativas")
+        print(f"❌ Failed after {max_retries} attempts")
         return False
     
     def disconnect(self):

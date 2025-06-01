@@ -1,37 +1,37 @@
--- Script para monitoramento completo do TIME DE POKÉMON no mGBA
--- Compatível com a API do mGBA v0.10+
+-- Script for complete POKEMON TEAM monitoring in mGBA
+-- Compatible with mGBA API v0.10+
 
--- Verificação do ambiente mGBA
+-- mGBA environment verification
 if not emu then
-    console:error("ERRO: Este script deve ser executado no mGBA")
-    console:error("Vá em Tools > Scripting... e carregue este script")
+    console:error("ERROR: This script must be executed in mGBA")
+    console:error("Go to Tools > Scripting... and load this script")
     return
 end
 
--- Configurações
-local BASE_ADDRESS = 0x02024284    -- Endereço base do primeiro Pokémon no time
-local POKEMON_SIZE = 100           -- Cada Pokémon ocupa 100 bytes
-local MAX_TEAM_SIZE = 6           -- Máximo de 6 Pokémons no time
-local UPDATE_FREQUENCY = 1000      -- A cada quantos frames atualizar (60 = ~1 segundo)
+-- Configuration
+local BASE_ADDRESS = 0x02024284    -- Base address of the first Pokemon in team
+local POKEMON_SIZE = 100           -- Each Pokemon occupies 100 bytes
+local MAX_TEAM_SIZE = 6           -- Maximum of 6 Pokemon in team
+local UPDATE_FREQUENCY = 1000      -- How many frames to update (60 = ~1 second)
 
--- Variáveis globais
+-- Global variables
 local frame_count = 0
 local last_team_data = {}
 
--- Variáveis do servidor socket (baseado no test_server.lua)
+-- Socket server variables (based on test_server.lua)
 
 -- local socket = require("socket")
 local server = nil
 
 
--- Importa os módulos
+-- Import modules
 local readPokemonData = require("read_pokemon_data")
 local socket_server = require("socket_server")
 
 
 
 
--- Função para serializar dados para JSON simples
+-- Function to serialize data to simple JSON
 local function tableToJson(data)
     if type(data) ~= "table" then
         if type(data) == "string" then
@@ -53,10 +53,10 @@ local function tableToJson(data)
         end
         first = false
         
-        -- Chave
+        -- Key
         table.insert(json_parts, '"' .. tostring(key) .. '":')
         
-        -- Valor
+        -- Value
         if type(value) == "table" then
             table.insert(json_parts, tableToJson(value))
         elseif type(value) == "string" then
@@ -72,7 +72,7 @@ local function tableToJson(data)
     return table.concat(json_parts)
 end
 
--- Função para enviar dados para todos os clientes conectados
+-- Function to send data to all connected clients
 local function sendDataToClients(data)
     if #socket_server.socketList == 0 then return end
     
@@ -82,12 +82,12 @@ local function sendDataToClients(data)
     for i, client in ipairs(socket_server.socketList) do
         local result, err = client:send(json_data .. "\n")
         if not result then
-            console:log("🔌 Cliente desconectado")
+            console:log("🔌 Client disconnected")
             table.insert(clients_to_remove, i)
         end
     end
     
-    -- Remove clientes desconectados
+    -- Remove disconnected clients
     for i = #clients_to_remove, 1, -1 do
         local client = socket_server.socketList[clients_to_remove[i]]
         client:close()
@@ -95,7 +95,7 @@ local function sendDataToClients(data)
     end
 end
 
--- Função para converter dados do time para formato JSON
+-- Function to convert team data to JSON format
 local function teamDataToJson(team_data, pokemon_count)
     local json_team = {
         timestamp = os.time(),
@@ -120,16 +120,16 @@ local function teamDataToJson(team_data, pokemon_count)
     return json_team
 end
 
--- Função para calcular o endereço de um Pokémon específico
+-- Function to calculate the address of a specific Pokemon
 local function getPokemonAddress(slot)
     if slot < 1 or slot > MAX_TEAM_SIZE then
-        console:error("Slot inválido: " .. slot .. ". Use valores de 1 a " .. MAX_TEAM_SIZE)
+        console:error("Invalid slot: " .. slot .. ". Use values from 1 to " .. MAX_TEAM_SIZE)
         return nil
     end
     return BASE_ADDRESS + ((slot - 1) * POKEMON_SIZE)
 end
 
--- Função para ler dados de todo o time
+-- Function to read data from the entire team
 local function readTeamData()
     local team = {}
     local pokemon_count = 0
@@ -150,7 +150,7 @@ local function readTeamData()
     return team, pokemon_count
 end
 
--- Função para comparar dados e detectar mudanças no time
+-- Function to compare data and detect team changes
 local function detectTeamChanges(current_team, previous_team)
     local changes = {}
     
@@ -158,26 +158,26 @@ local function detectTeamChanges(current_team, previous_team)
         local current = current_team[slot]
         local previous = previous_team[slot]
         
-        -- Pokémon foi adicionado
+        -- Pokemon was added
         if current and not previous then
-            table.insert(changes, string.format("SLOT %d: Novo Pokémon - Espécie %d Nível %d", 
+            table.insert(changes, string.format("SLOT %d: New Pokemon - Species %d Level %d", 
                 slot, current.species, current.level))
         
-        -- Pokémon foi removido
+        -- Pokemon was removed
         elseif not current and previous then
-            table.insert(changes, string.format("SLOT %d: Pokémon removido - Era Espécie %d", 
+            table.insert(changes, string.format("SLOT %d: Pokemon removed - Was Species %d", 
                 slot, previous.species))
         
-        -- Pokémon mudou
+        -- Pokemon changed
         elseif current and previous then
             local slot_changes = {}
             
             if current.species ~= previous.species then
-                table.insert(slot_changes, string.format("Espécie: %d → %d", previous.species, current.species))
+                table.insert(slot_changes, string.format("Species: %d → %d", previous.species, current.species))
             end
             
             if current.level ~= previous.level then
-                table.insert(slot_changes, string.format("Nível: %d → %d", previous.level, current.level))
+                table.insert(slot_changes, string.format("Level: %d → %d", previous.level, current.level))
             end
             
             if current.hp_current ~= previous.hp_current then
@@ -202,37 +202,37 @@ local function detectTeamChanges(current_team, previous_team)
     return changes
 end
 
--- Função executada a cada frame
+-- Function executed every frame
 local function onFrame()
     frame_count = frame_count + 1
     
-    -- Aceita novas conexões a cada frame
+    -- Accept new connections every frame
 
-    -- Atualiza a cada UPDATE_FREQUENCY frames
+    -- Update every UPDATE_FREQUENCY frames
     if frame_count % UPDATE_FREQUENCY == 0 then
         local team_data, pokemon_count = readTeamData()
 
         if pokemon_count > 0 then
-            -- Converte dados para JSON e envia via socket
+            -- Convert data to JSON and send via socket
             local json_data = teamDataToJson(team_data, pokemon_count)
             sendDataToClients(json_data)
             
-            console:log(string.format("Frame %d - Time com %d Pokémon(s) - Enviado para %d cliente(s)", 
+            console:log(string.format("Frame %d - Team with %d Pokemon(s) - Sent to %d client(s)", 
                 frame_count, pokemon_count, #socket_server.socketList))
             
             for slot = 1, MAX_TEAM_SIZE do
                 local pokemon = team_data[slot]
                 if pokemon then
-                    console:log(string.format("  SLOT %d: Espécie %d | Nível %d | HP %d/%d",
+                    console:log(string.format("  SLOT %d: Species %d | Level %d | HP %d/%d",
                         slot, pokemon.species, pokemon.level, pokemon.hp_current, pokemon.hp_max))
                 end
             end
 
-            -- Detecta mudanças
+            -- Detect changes
             local changes = detectTeamChanges(team_data, last_team_data)
             if #changes > 0 then
                 for _, change in ipairs(changes) do
-                    console:log("MUDANÇA: " .. change)
+                    console:log("CHANGE: " .. change)
                 end
             end
 
@@ -241,48 +241,48 @@ local function onFrame()
     end
 end
 
--- Função executada quando o jogo inicia
+-- Function executed when the game starts
 local function onStart()
-    console:log("=== SCRIPT TEAM POKÉMON MONITOR INICIADO ===")
-    console:log("Jogo detectado: " .. (emu:getGameTitle() or "Desconhecido"))
-    console:log("Código do jogo: " .. (emu:getGameCode() or "N/A"))
-    console:log("Endereço base: " .. string.format("0x%X", BASE_ADDRESS))
-    console:log("Tamanho por Pokémon: " .. POKEMON_SIZE .. " bytes")
-    console:log("Frequência de atualização: a cada " .. UPDATE_FREQUENCY .. " frames")
-    console:log("Monitorando slots 1-" .. MAX_TEAM_SIZE)
+    console:log("=== POKEMON TEAM MONITOR SCRIPT STARTED ===")
+    console:log("Game detected: " .. (emu:getGameTitle() or "Unknown"))
+    console:log("Game code: " .. (emu:getGameCode() or "N/A"))
+    console:log("Base address: " .. string.format("0x%X", BASE_ADDRESS))
+    console:log("Size per Pokemon: " .. POKEMON_SIZE .. " bytes")
+    console:log("Update frequency: every " .. UPDATE_FREQUENCY .. " frames")
+    console:log("Monitoring slots 1-" .. MAX_TEAM_SIZE)
 
-    -- Inicializa servidor socket
+    -- Initialize socket server
     if socket_server.InitializeServer() then
-        console:log("Aguardando conexões Python...")
+        console:log("Waiting for Python connections...")
     end
 
-    -- Teste inicial do time completo
+    -- Initial complete team test
     local initial_team, pokemon_count = readTeamData()
     if pokemon_count > 0 then
-        console:log(string.format("Time inicial detectado com %d Pokémon(s):", pokemon_count))
+        console:log(string.format("Initial team detected with %d Pokemon(s):", pokemon_count))
         for slot = 1, MAX_TEAM_SIZE do
             local pokemon = initial_team[slot]
             if pokemon then
-                console:log(string.format("  SLOT %d: Espécie %d | Nível %d | HP %d/%d",
+                console:log(string.format("  SLOT %d: Species %d | Level %d | HP %d/%d",
                     slot, pokemon.species, pokemon.level, pokemon.hp_current, pokemon.hp_max))
             end
         end
         last_team_data = initial_team
         
-        -- Envia dados iniciais via socket
+        -- Send initial data via socket
         local json_data = teamDataToJson(initial_team, pokemon_count)
         sendDataToClients(json_data)
     else
-        console:warn("Nenhum Pokémon detectado no time inicial")
-        console:warn("Verifique se o endereço de memória está correto para este jogo")
+        console:warn("No Pokemon detected in initial team")
+        console:warn("Check if the memory address is correct for this game")
     end
 end
 
--- Função de limpeza ao fechar
+-- Cleanup function on close
 local function onShutdown()
-    console:log("🔌 Encerrando servidor...")
+    console:log("🔌 Shutting down server...")
     
-    -- Fecha todas as conexões de clientes
+    -- Close all client connections
     for _, client in ipairs(socket_server.socketList) do
         if client then
             client:send("DISCONNECT\n")
@@ -291,21 +291,21 @@ local function onShutdown()
     end
     socket_server.socketList = {}
     
-    -- Fecha o servidor
+    -- Close the server
     if server then
         server:close()
         server = nil
     end
     
-    console:log("🔌 Servidor encerrado")
+    console:log("🔌 Server shut down")
 end
 
--- Registra os callbacks
+-- Register callbacks
 callbacks:add("start", onStart)
 callbacks:add("frame", onFrame)
 callbacks:add("shutdown", onShutdown)
 
--- Se o jogo já está rodando, executa onStart imediatamente
+-- If the game is already running, execute onStart immediately
 if emu:getGameTitle() then
     onStart()
 end
