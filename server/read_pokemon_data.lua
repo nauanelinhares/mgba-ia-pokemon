@@ -7,6 +7,8 @@ local function readPokemonData(base_address)
 
     local success, data = pcall(function()
         return {
+                 -- Tipo do Pokémon
+            type = emu:read8(0x0300500C + 0x0000),
             species = emu:read16(base_address + 0x20),    -- ID do Pokémon
             hp_current = emu:read16(base_address + 0x56), -- HP atual
             hp_max = emu:read16(base_address + 0x58),     -- HP máximo

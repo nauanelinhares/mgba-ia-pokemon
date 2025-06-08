@@ -1,5 +1,8 @@
 {
     "Lua.diagnostics.globals": [
-        "emu"
+        "emu",
+        "socket",
+        "console",
+        "species"
     ]
 }
