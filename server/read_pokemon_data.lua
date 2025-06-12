@@ -77,6 +77,10 @@ local function read_party_pokemon(base_address)
 
     local pokemon_structure = read_pokemon_structure(base_address)
 
+    if not pokemon_structure.species then 
+        return nil
+    end
+
     local species = pokemon_structure.species
 
     local base_stats
@@ -109,9 +113,8 @@ local function read_party_pokemon(base_address)
         }
     end)
 
-    if success and data.species > 0 then
+    if success  then
         -- Adiciona as stats base ao resultado
-        data.base_stats = readBaseStats(data.species)
         return data
     else
         console:warn("Não foi possível ler dados do Pokémon no endereço " .. string.format("0x%X", base_address))

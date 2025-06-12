@@ -17,11 +17,11 @@ class PokemonClient:
     def load_pokemon_names(self) -> Dict[int, str]:
         """Load Pokemon names from JSON file"""
         try:
-            with open('data/game/pokemon_unbound/pokemon_data.json', 'r') as f:
+            with open('data/game/pokemon_firered/pokemon_data.json', 'r') as f:
                 data = json.load(f)
                 return {int(k): v for k, v in data.items()}
         except FileNotFoundError:
-            print("⚠️  File pokemon_unbound_data.json not found")
+            print("⚠️  File pokemon_firered_data.json not found")
             print("   Pokemon will be displayed with numeric ID only")
             return {}
     
