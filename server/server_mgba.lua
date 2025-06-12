@@ -223,8 +223,8 @@ local function onFrame()
             for slot = 1, MAX_TEAM_SIZE do
                 local pokemon = team_data[slot]
                 if pokemon then
-                    console:log(string.format("  SLOT %d: Species %d | Type %d | Level %d | HP %d/%d",
-                        slot, pokemon.species, pokemon.type, pokemon.level, pokemon.hp_current, pokemon.hp_max))
+                    console:log(string.format("  SLOT %d: Species %d | Type1 %d | Type2 %d | Level %d | HP %d/%d",
+                        slot, pokemon.species, pokemon.type1, pokemon.type2, pokemon.level, pokemon.hp_current, pokemon.hp_max))
                 end
             end
 
@@ -263,8 +263,8 @@ local function onStart()
         for slot = 1, MAX_TEAM_SIZE do
             local pokemon = initial_team[slot]
             if pokemon then
-                console:log(string.format("  SLOT %d: Species %d | Type %d | Level %d | HP %d/%d",
-                    slot, pokemon.species, pokemon.type, pokemon.level, pokemon.hp_current, pokemon.hp_max))
+                console:log(string.format("  SLOT %d: Species %d | Type1 %d | Type2 %d | Level %d | HP %d/%d",
+                    slot, pokemon.species, pokemon.type1, pokemon.type2, pokemon.level, pokemon.hp_current, pokemon.hp_max))
             end
         end
         last_team_data = initial_team
