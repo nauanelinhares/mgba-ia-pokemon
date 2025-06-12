@@ -10,6 +10,7 @@ end
 
 -- Configuration
 local BASE_ADDRESS = 0x02024284    -- Base address of the first Pokemon in team
+local BASE_ADDRESS_ENEMY = 0x0202402C -- Base address of the first Pokemon in enemy team
 local POKEMON_SIZE = 100           -- Each Pokemon occupies 100 bytes
 local MAX_TEAM_SIZE = 6           -- Maximum of 6 Pokemon in team
 local UPDATE_FREQUENCY = 1000      -- How many frames to update (60 = ~1 second)
@@ -17,6 +18,7 @@ local UPDATE_FREQUENCY = 1000      -- How many frames to update (60 = ~1 second)
 -- Global variables
 local frame_count = 0
 local last_team_data = {}
+local last_enemy_data = {}
 
 -- Socket server variables (based on test_server.lua)
 
@@ -96,24 +98,47 @@ local function sendDataToClients(data)
 end
 
 -- Function to convert team data to JSON format
-local function teamDataToJson(team_data, pokemon_count)
+local function teamDataToJson(team_data, pokemon_count, enemy_data, enemy_count)
     local json_team = {
         timestamp = os.time(),
         frame = frame_count,
-        pokemon_count = pokemon_count,
-        team = {}
+        player = {
+            pokemon_count = pokemon_count,
+            team = {}
+        },
+        enemy = {
+            pokemon_count = enemy_count or 0,
+            team = {}
+        }
     }
     
+    -- Player team
     for slot = 1, MAX_TEAM_SIZE do
         local pokemon = team_data[slot]
         if pokemon then
-            json_team.team[slot] = {
+            json_team.player.team[slot] = {
                 slot = slot,
                 species = pokemon.species,
                 level = pokemon.level,
                 hp_current = pokemon.hp_current,
                 hp_max = pokemon.hp_max
             }
+        end
+    end
+    
+    -- Enemy team
+    if enemy_data then
+        for slot = 1, MAX_TEAM_SIZE do
+            local pokemon = enemy_data[slot]
+            if pokemon then
+                json_team.enemy.team[slot] = {
+                    slot = slot,
+                    species = pokemon.species,
+                    level = pokemon.level,
+                    hp_current = pokemon.hp_current,
+                    hp_max = pokemon.hp_max
+                }
+            end
         end
     end
     
@@ -127,6 +152,15 @@ local function getPokemonAddress(slot)
         return nil
     end
     return BASE_ADDRESS + ((slot - 1) * POKEMON_SIZE)
+end
+
+-- Function to calculate the address of a specific Enemy Pokemon
+local function getEnemyPokemonAddress(slot)
+    if slot < 1 or slot > MAX_TEAM_SIZE then
+        console:error("Invalid enemy slot: " .. slot .. ". Use values from 1 to " .. MAX_TEAM_SIZE)
+        return nil
+    end
+    return BASE_ADDRESS_ENEMY + ((slot - 1) * POKEMON_SIZE)
 end
 
 -- Function to read data from the entire team
@@ -150,9 +184,31 @@ local function readTeamData()
     return team, pokemon_count
 end
 
+-- Function to read data from the entire enemy team
+local function readEnemyTeamData()
+    local team = {}
+    local pokemon_count = 0
+    
+    for slot = 1, MAX_TEAM_SIZE do
+        local address = getEnemyPokemonAddress(slot)
+        if address then
+            local pokemon_data = readPokemonData.read_party_pokemon(address)
+            if pokemon_data and pokemon_data.species > 0 then
+                team[slot] = pokemon_data
+                pokemon_count = pokemon_count + 1
+            else
+                team[slot] = nil
+            end
+        end
+    end
+    
+    return team, pokemon_count
+end
+
 -- Function to compare data and detect team changes
-local function detectTeamChanges(current_team, previous_team)
+local function detectTeamChanges(current_team, previous_team, team_type)
     local changes = {}
+    local prefix = team_type or "PLAYER"
     
     for slot = 1, MAX_TEAM_SIZE do
         local current = current_team[slot]
@@ -160,13 +216,13 @@ local function detectTeamChanges(current_team, previous_team)
         
         -- Pokemon was added
         if current and not previous then
-            table.insert(changes, string.format("SLOT %d: New Pokemon - Species %d Level %d", 
-                slot, current.species, current.level))
+            table.insert(changes, string.format("%s SLOT %d: New Pokemon - Species %d Level %d", 
+                prefix, slot, current.species, current.level))
         
         -- Pokemon was removed
         elseif not current and previous then
-            table.insert(changes, string.format("SLOT %d: Pokemon removed - Was Species %d", 
-                slot, previous.species))
+            table.insert(changes, string.format("%s SLOT %d: Pokemon removed - Was Species %d", 
+                prefix, slot, previous.species))
         
         -- Pokemon changed
         elseif current and previous then
@@ -194,7 +250,7 @@ local function detectTeamChanges(current_team, previous_team)
             end
             
             if #slot_changes > 0 then
-                table.insert(changes, string.format("SLOT %d: %s", slot, table.concat(slot_changes, " | ")))
+                table.insert(changes, string.format("%s SLOT %d: %s", prefix, slot, table.concat(slot_changes, " | ")))
             end
         end
     end
@@ -211,32 +267,58 @@ local function onFrame()
     -- Update every UPDATE_FREQUENCY frames
     if frame_count % UPDATE_FREQUENCY == 0 then
         local team_data, pokemon_count = readTeamData()
+        local enemy_data, enemy_count = readEnemyTeamData()
 
-        if pokemon_count > 0 then
+        if pokemon_count > 0 or enemy_count > 0 then
             -- Convert data to JSON and send via socket
-            local json_data = teamDataToJson(team_data, pokemon_count)
+            local json_data = teamDataToJson(team_data, pokemon_count, enemy_data, enemy_count)
             sendDataToClients(json_data)
             
-            console:log(string.format("Frame %d - Team with %d Pokemon(s) - Sent to %d client(s)", 
-                frame_count, pokemon_count, #socket_server.socketList))
+            console:log(string.format("Frame %d - Player: %d Pokemon(s) | Enemy: %d Pokemon(s) - Sent to %d client(s)", 
+                frame_count, pokemon_count, enemy_count, #socket_server.socketList))
             
-            for slot = 1, MAX_TEAM_SIZE do
-                local pokemon = team_data[slot]
-                if pokemon then
-                    console:log(string.format("  SLOT %d: Species %d | Type1 %d | Type2 %d | Level %d | HP %d/%d",
-                        slot, pokemon.species, pokemon.type1, pokemon.type2, pokemon.level, pokemon.hp_current, pokemon.hp_max))
+            -- Log player team
+            if pokemon_count > 0 then
+                console:log("PLAYER TEAM:")
+                for slot = 1, MAX_TEAM_SIZE do
+                    local pokemon = team_data[slot]
+                    if pokemon then
+                        console:log(string.format("  SLOT %d: Species %d | Type1 %d | Type2 %d | Level %d | HP %d/%d",
+                            slot, pokemon.species, pokemon.type1, pokemon.type2, pokemon.level, pokemon.hp_current, pokemon.hp_max))
+                    end
+                end
+            end
+            
+            -- Log enemy team
+            if enemy_count > 0 then
+                console:log("ENEMY TEAM:")
+                for slot = 1, MAX_TEAM_SIZE do
+                    local pokemon = enemy_data[slot]
+                    if pokemon then
+                        console:log(string.format("  SLOT %d: Species %d | Type1 %d | Type2 %d | Level %d | HP %d/%d",
+                            slot, pokemon.species, pokemon.type1, pokemon.type2, pokemon.level, pokemon.hp_current, pokemon.hp_max))
+                    end
                 end
             end
 
-            -- Detect changes
-            local changes = detectTeamChanges(team_data, last_team_data)
-            if #changes > 0 then
-                for _, change in ipairs(changes) do
+            -- Detect player team changes
+            local player_changes = detectTeamChanges(team_data, last_team_data, "PLAYER")
+            if #player_changes > 0 then
+                for _, change in ipairs(player_changes) do
+                    console:log("CHANGE: " .. change)
+                end
+            end
+            
+            -- Detect enemy team changes
+            local enemy_changes = detectTeamChanges(enemy_data, last_enemy_data, "ENEMY")
+            if #enemy_changes > 0 then
+                for _, change in ipairs(enemy_changes) do
                     console:log("CHANGE: " .. change)
                 end
             end
 
             last_team_data = team_data
+            last_enemy_data = enemy_data
         end
     end
 end
@@ -246,10 +328,11 @@ local function onStart()
     console:log("=== POKEMON TEAM MONITOR SCRIPT STARTED ===")
     console:log("Game detected: " .. (emu:getGameTitle() or "Unknown"))
     console:log("Game code: " .. (emu:getGameCode() or "N/A"))
-    console:log("Base address: " .. string.format("0x%X", BASE_ADDRESS))
+    console:log("Player base address: " .. string.format("0x%X", BASE_ADDRESS))
+    console:log("Enemy base address: " .. string.format("0x%X", BASE_ADDRESS_ENEMY))
     console:log("Size per Pokemon: " .. POKEMON_SIZE .. " bytes")
     console:log("Update frequency: every " .. UPDATE_FREQUENCY .. " frames")
-    console:log("Monitoring slots 1-" .. MAX_TEAM_SIZE)
+    console:log("Monitoring slots 1-" .. MAX_TEAM_SIZE .. " for both teams")
 
     -- Initialize socket server
     if socket_server.InitializeServer() then
@@ -258,8 +341,10 @@ local function onStart()
 
     -- Initial complete team test
     local initial_team, pokemon_count = readTeamData()
+    local initial_enemy, enemy_count = readEnemyTeamData()
+    
     if pokemon_count > 0 then
-        console:log(string.format("Initial team detected with %d Pokemon(s):", pokemon_count))
+        console:log(string.format("Initial PLAYER team detected with %d Pokemon(s):", pokemon_count))
         for slot = 1, MAX_TEAM_SIZE do
             local pokemon = initial_team[slot]
             if pokemon then
@@ -268,13 +353,32 @@ local function onStart()
             end
         end
         last_team_data = initial_team
-        
-        -- Send initial data via socket
-        local json_data = teamDataToJson(initial_team, pokemon_count)
-        sendDataToClients(json_data)
     else
-        console:warn("No Pokemon detected in initial team")
-        console:warn("Check if the memory address is correct for this game")
+        console:warn("No Pokemon detected in initial PLAYER team")
+    end
+    
+    if enemy_count > 0 then
+        console:log(string.format("Initial ENEMY team detected with %d Pokemon(s):", enemy_count))
+        for slot = 1, MAX_TEAM_SIZE do
+            local pokemon = initial_enemy[slot]
+            if pokemon then
+                console:log(string.format("  SLOT %d: Species %d | Type1 %d | Type2 %d | Level %d | HP %d/%d",
+                    slot, pokemon.species, pokemon.type1, pokemon.type2, pokemon.level, pokemon.hp_current, pokemon.hp_max))
+            end
+        end
+        last_enemy_data = initial_enemy
+    else
+        console:warn("No Pokemon detected in initial ENEMY team")
+    end
+    
+    if pokemon_count == 0 and enemy_count == 0 then
+        console:warn("Check if the memory addresses are correct for this game")
+    end
+        
+    -- Send initial data via socket
+    if pokemon_count > 0 or enemy_count > 0 then
+        local json_data = teamDataToJson(initial_team, pokemon_count, initial_enemy, enemy_count)
+        sendDataToClients(json_data)
     end
 end
 
