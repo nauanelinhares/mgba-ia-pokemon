@@ -137,7 +137,6 @@ local function readTeamData()
     for slot = 1, MAX_TEAM_SIZE do
         local address = getPokemonAddress(slot)
         if address then
-            readPokemonData.testBaseStats()
             local pokemon_data = readPokemonData.read_party_pokemon(address)
             if pokemon_data and pokemon_data.species > 0 then
                 team[slot] = pokemon_data
