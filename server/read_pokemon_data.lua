@@ -2,18 +2,8 @@
 
 -- Importa as dependências necessárias
 local Utils = require("Utils.utils")
-local GeneralData = require("server.structure_gen3.general_data")
-local PokemonFirered = require("addresses.pokemon_firered")
-local PokemonUnbound = require("addresses.pokemon_unbound")
+local GeneralData = require("structure_gen3.general_data")
 
-
-
-
-
--- Endereço da tabela de stats base em Fire Red/Leaf Green
--- fired red base stats address 0x8254784
-local BASE_STATS_TABLE_ADDRESS = PokemonFirered.Addresses.base_stats_table_address
-local BASE_STATS_ENTRY_SIZE = PokemonFirered.Addresses.base_stats_entry_size
 
 -- Função para ler stats base de um Pokémon por ID
 local function readBaseStats(base_stats_table_address, base_stats_entry_size, pokemonId)
@@ -76,7 +66,7 @@ local function read_pokemon_structure(base_address)
     }
 end 
 
-local function read_party_pokemon(base_address)
+local function read_party_pokemon(base_address, base_stats_table_address, base_stats_entry_size)
     if not base_address then
         console:error("BASE_ADDRESS não foi fornecido para readPokemonData")
         return nil
@@ -93,7 +83,7 @@ local function read_party_pokemon(base_address)
     local base_stats
 
     if species > 0 then 
-        base_stats = readBaseStats(BASE_STATS_TABLE_ADDRESS, BASE_STATS_ENTRY_SIZE, species)
+        base_stats = readBaseStats(base_stats_table_address, base_stats_entry_size, species)
     else
         base_stats = nil
     end
