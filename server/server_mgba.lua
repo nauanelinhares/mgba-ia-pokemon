@@ -8,10 +8,13 @@ if not emu then
     return
 end
 
+local PokemonFirered = require("addresses.pokemon_firered")
+local PokemonUnbound = require("addresses.pokemon_unbound")
+
 -- Configuration
-local BASE_ADDRESS = 0x02024284    -- Base address of the first Pokemon in team
-local BASE_ADDRESS_ENEMY = 0x0202402C -- Base address of the first Pokemon in enemy team
-local POKEMON_SIZE = 100           -- Each Pokemon occupies 100 bytes
+local BASE_ADDRESS = PokemonFirered.Addresses.pokemon_party_address    -- Base address of the first Pokemon in team
+local BASE_ADDRESS_ENEMY = PokemonFirered.Addresses.pokemon_party_address -- Base address of the first Pokemon in enemy team
+local POKEMON_SIZE = PokemonFirered.Addresses.pokemon_party_entry_size           -- Each Pokemon occupies 100 bytes
 local MAX_TEAM_SIZE = 6           -- Maximum of 6 Pokemon in team
 local UPDATE_FREQUENCY = 1000      -- How many frames to update (60 = ~1 second)
 

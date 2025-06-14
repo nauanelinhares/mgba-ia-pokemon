@@ -3,10 +3,17 @@
 -- Importa as dependências necessárias
 local Utils = require("Utils.utils")
 local GeneralData = require("structure.general_data")
+local PokemonFirered = require("addresses.pokemon_firered")
+local PokemonUnbound = require("addresses.pokemon_unbound")
+
+
+
+
 
 -- Endereço da tabela de stats base em Fire Red/Leaf Green
-local BASE_STATS_TABLE_ADDRESS = 0x8254784
-local BASE_STATS_ENTRY_SIZE = 28 -- Tamanho de cada entrada na tabela de stats base
+-- fired red base stats address 0x8254784
+local BASE_STATS_TABLE_ADDRESS = PokemonFirered.Addresses.base_stats_table_address
+local BASE_STATS_ENTRY_SIZE = PokemonFirered.Addresses.base_stats_entry_size
 
 -- Função para ler stats base de um Pokémon por ID
 local function readBaseStats(pokemonId)
