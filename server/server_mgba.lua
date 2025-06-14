@@ -5,7 +5,7 @@
 -- Import modules
 local readPokemonData = require("read_pokemon_data")
 local socket_server = require("socket_server")
-local GAME_CONFIGS = require("game_config")
+local GAMES = require("game.game_config")
 
 
 -- mGBA environment verification
@@ -17,15 +17,16 @@ end
 
 
 
-GAME_CHOICE = GAME_CONFIGS.firered
+CURRENT_GAME = GAMES.unbound:new()
+
 
 -- Configuration
-local GAME_NAME = GAME_CHOICE.name
-local BASE_ADDRESS = GAME_CHOICE.addresses.pokemon_party_address   -- Base address of the first Pokemon in team
-local BASE_ADDRESS_ENEMY = GAME_CHOICE.addresses.pokemon_party_enemy_address -- Base address of the first Pokemon in enemy team
-local POKEMON_SIZE = GAME_CHOICE.addresses.pokemon_party_entry_size           -- Each Pokemon occupies 100 bytes
-local BASE_STATS_TABLE_ADDRESS = GAME_CHOICE.addresses.base_stats_table_address
-local BASE_STATS_ENTRY_SIZE = GAME_CHOICE.addresses.base_stats_entry_size
+local GAME_NAME = CURRENT_GAME.name
+local BASE_ADDRESS = CURRENT_GAME.addresses.pokemon_party_address   -- Base address of the first Pokemon in team
+local BASE_ADDRESS_ENEMY = CURRENT_GAME.addresses.pokemon_party_enemy_address -- Base address of the first Pokemon in enemy team
+local POKEMON_SIZE = CURRENT_GAME.addresses.pokemon_party_entry_size           -- Each Pokemon occupies 100 bytes
+local BASE_STATS_TABLE_ADDRESS = CURRENT_GAME.addresses.base_stats_table_address
+local BASE_STATS_ENTRY_SIZE = CURRENT_GAME.addresses.base_stats_entry_size
 local MAX_TEAM_SIZE = 6           -- Maximum of 6 Pokemon in team
 local UPDATE_FREQUENCY = 1000      -- How many frames to update (60 = ~1 second)
 
@@ -174,7 +175,7 @@ local function readTeamData()
     for slot = 1, MAX_TEAM_SIZE do
         local address = getPokemonAddress(slot)
         if address then
-            local pokemon_data = readPokemonData.read_party_pokemon(address, BASE_STATS_TABLE_ADDRESS, BASE_STATS_ENTRY_SIZE)
+            local pokemon_data = CURRENT_GAME:readPartyPokemon(address)
             if pokemon_data and pokemon_data.species > 0 then
                 team[slot] = pokemon_data
                 pokemon_count = pokemon_count + 1
@@ -195,7 +196,7 @@ local function readEnemyTeamData()
     for slot = 1, MAX_TEAM_SIZE do
         local address = getEnemyPokemonAddress(slot)
         if address then
-            local pokemon_data = readPokemonData.read_party_pokemon(address, BASE_STATS_TABLE_ADDRESS, BASE_STATS_ENTRY_SIZE)
+            local pokemon_data = CURRENT_GAME:readPartyPokemon(address)
             if pokemon_data and pokemon_data.species > 0 then
                 team[slot] = pokemon_data
                 pokemon_count = pokemon_count + 1
