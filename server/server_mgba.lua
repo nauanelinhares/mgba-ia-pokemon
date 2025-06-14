@@ -125,7 +125,9 @@ local function teamDataToJson(team_data, pokemon_count, enemy_data, enemy_count)
                 species = pokemon.species,
                 level = pokemon.level,
                 hp_current = pokemon.hp_current,
-                hp_max = pokemon.hp_max
+                hp_max = pokemon.hp_max,
+                type1 = pokemon.type1,
+                type2 = pokemon.type2
             }
         end
     end
@@ -140,7 +142,9 @@ local function teamDataToJson(team_data, pokemon_count, enemy_data, enemy_count)
                     species = pokemon.species,
                     level = pokemon.level,
                     hp_current = pokemon.hp_current,
-                    hp_max = pokemon.hp_max
+                    hp_max = pokemon.hp_max,
+                    type1 = pokemon.type1,
+                    type2 = pokemon.type2
                 }
             end
         end
