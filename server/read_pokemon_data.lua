@@ -2,7 +2,7 @@
 
 -- Importa as dependências necessárias
 local Utils = require("Utils.utils")
-local GeneralData = require("structure.general_data")
+local GeneralData = require("server.structure_gen3.general_data")
 local PokemonFirered = require("addresses.pokemon_firered")
 local PokemonUnbound = require("addresses.pokemon_unbound")
 
@@ -16,14 +16,14 @@ local BASE_STATS_TABLE_ADDRESS = PokemonFirered.Addresses.base_stats_table_addre
 local BASE_STATS_ENTRY_SIZE = PokemonFirered.Addresses.base_stats_entry_size
 
 -- Função para ler stats base de um Pokémon por ID
-local function readBaseStats(pokemonId)
+local function readBaseStats(base_stats_table_address, base_stats_entry_size, pokemonId)
     if not pokemonId or pokemonId <= 0 then
         console:error("ID do Pokémon inválido para readBaseStats: " .. tostring(pokemonId))
         return nil
     end
 
     -- Calcula o endereço das stats base para este Pokémon
-    local baseStatsAddr = BASE_STATS_TABLE_ADDRESS + ((pokemonId) * BASE_STATS_ENTRY_SIZE)
+    local baseStatsAddr = base_stats_table_address + ((pokemonId) * base_stats_entry_size)
     
     local success, baseStats = pcall(function()
         return {
@@ -93,7 +93,7 @@ local function read_party_pokemon(base_address)
     local base_stats
 
     if species > 0 then 
-        base_stats = readBaseStats(species)
+        base_stats = readBaseStats(BASE_STATS_TABLE_ADDRESS, BASE_STATS_ENTRY_SIZE, species)
     else
         base_stats = nil
     end

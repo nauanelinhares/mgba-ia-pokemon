@@ -1,6 +1,14 @@
 -- Script for complete POKEMON TEAM monitoring in mGBA
 -- Compatible with mGBA API v0.10+
 
+
+-- Import modules
+local readPokemonData = require("read_pokemon_data")
+local socket_server = require("socket_server")
+local PokemonFirered = require("addresses.pokemon_firered")
+local PokemonUnbound = require("addresses.pokemon_unbound")
+
+
 -- mGBA environment verification
 if not emu then
     console:error("ERROR: This script must be executed in mGBA")
@@ -8,8 +16,8 @@ if not emu then
     return
 end
 
-local PokemonFirered = require("addresses.pokemon_firered")
-local PokemonUnbound = require("addresses.pokemon_unbound")
+
+
 
 -- Configuration
 local BASE_ADDRESS = PokemonFirered.Addresses.pokemon_party_address    -- Base address of the first Pokemon in team
@@ -22,17 +30,6 @@ local UPDATE_FREQUENCY = 1000      -- How many frames to update (60 = ~1 second)
 local frame_count = 0
 local last_team_data = {}
 local last_enemy_data = {}
-
--- Socket server variables (based on test_server.lua)
-
--- local socket = require("socket")
-local server = nil
-
-
--- Import modules
-local readPokemonData = require("read_pokemon_data")
-local socket_server = require("socket_server")
-
 
 
 
